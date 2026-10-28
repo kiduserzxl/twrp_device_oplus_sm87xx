@@ -42,3 +42,6 @@ PRODUCT_SOONG_NAMESPACES += $(DEVICE_PATH)
 # (required by OrangeFox fox_16.0 build; CrashRecovery apex pulled in by base product)
 PRODUCT_APEX_SYSTEM_SERVER_JARS += \
     com.android.crashrecovery.systemserverclasspath.fragment:service-crashrecovery
+
+# OrangeFox-specific settings
+$(call inherit-product, $(DEVICE_PATH)/fox_sm87xx.mk)
