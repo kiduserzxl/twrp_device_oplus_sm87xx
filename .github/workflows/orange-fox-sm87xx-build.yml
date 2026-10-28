@@ -39,7 +39,7 @@ jobs:
           repo init --depth=1 -u https://gitlab.com/OrangeFox/Manifest.git -b fox_16.0
           (while true; do echo "Syncing OrangeFox sources..."; sleep 60; done) &
           TIP_PID=$!
-          repo sync -c --force-sync --no-tags
+          repo sync -c --force-sync --no-tags --optimized-fetch -j 4
           kill $TIP_PID || true
 
       - name: Setup device tree
