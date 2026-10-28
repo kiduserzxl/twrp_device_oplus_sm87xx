@@ -54,7 +54,7 @@ jobs:
       - name: Setup device tree
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
-          git clone https://github.com/kiduserzxl/twrp_device_oplus_sm87xx -b twrp-16.0 device/oplus/sm87xx
+          git clone https://github.com/kiduserzxl/twrp_device_oplus_sm87xx -b fox-sm87xx device/oplus/sm87xx
 
       - name: Build OrangeFox recovery
         run: |
