@@ -57,7 +57,7 @@ if [ "$1" = "$FDEVICE" -o "$FOX_BUILD_DEVICE" = "$FDEVICE" ]; then
 
 	# For OnePlus Ace 5 Pro / Pad 2 Pro (OPLUS sm87xx)
 	# NOTE: verify these model strings against your device (getprop ro.product.model / ro.product.name)
-	export TARGET_DEVICE_ALT="PKR110,OPD2A3L1"
+	export TARGET_DEVICE_ALT="PKR110,OPD2413"
 	export FOX_TARGET_DEVICES="$TARGET_DEVICE_ALT"
 	export FOX_USE_DMSETUP=1
 	export FOX_ENABLE_KERNELSU_SUPPORT=1
