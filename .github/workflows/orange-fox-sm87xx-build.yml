@@ -23,12 +23,13 @@ jobs:
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Setup swap
+      - name: Setup swap (best effort)
         run: |
-          sudo fallocate -l 12G /swapfile
+          df -h /
+          sudo fallocate -l 8G /swapfile || sudo fallocate -l 4G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
-          sudo swapon /swapfile
+          sudo swapon /swapfile || echo "Swap setup skipped (not enough space)"
           free -h
 
       - name: Sync OrangeFox fox_16.0 sources
