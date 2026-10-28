@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -18,18 +18,22 @@ jobs:
       - name: Setup environment
         run: |
           export DEBIAN_FRONTEND=noninteractive
-          sudo apt update && sudo apt upgrade -y
-          sudo apt install -y repo git python3 unzip
+          df -h /
+          sudo apt clean
+          sudo rm -rf /var/lib/apt/lists/* || true
+          sudo apt update
+          sudo apt install -y --no-install-recommends repo git python3 unzip
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Setup swap (best effort)
+      - name: Setup zram (no disk usage)
         run: |
-          df -h /
-          sudo fallocate -l 8G /swapfile || sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile || echo "Swap setup skipped (not enough space)"
+          sudo modprobe zram || true
+          sudo apt install -y --no-install-recommends zram-tools || true
+          sudo sed -i 's/^#PERCENT=50/PERCENT=90/' /etc/default/zramswap 2>/dev/null || true
+          sudo sed -i 's/^#PRIORITY=100/PRIORITY=1000/' /etc/default/zramswap 2>/dev/null || true
+          sudo systemctl restart zramswap 2>/dev/null || true
+          zramctl || true
           free -h
 
       - name: Sync OrangeFox fox_16.0 sources
