@@ -5,3 +5,8 @@
 #
 
 PRODUCT_MAKEFILES := $(LOCAL_DIR)/twrp_sm87xx.mk
+
+COMMON_LUNCH_CHOICES := \
+    twrp_sm87xx-user \
+    twrp_sm87xx-userdebug \
+    twrp_sm87xx-eng
