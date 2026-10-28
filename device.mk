@@ -38,3 +38,7 @@ PRODUCT_EXTRA_RECOVERY_KEYS += \
 
 # Soong namespaces
 PRODUCT_SOONG_NAMESPACES += $(DEVICE_PATH)
+# Android 16 CrashRecovery apex: declare system server jar to satisfy soong check
+# (required by OrangeFox fox_16.0 build; CrashRecovery apex pulled in by base product)
+PRODUCT_APEX_SYSTEM_SERVER_JARS += \
+    com.android.crashrecovery.systemserverclasspath.fragment:service-crashrecovery
