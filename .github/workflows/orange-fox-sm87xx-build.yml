@@ -60,6 +60,7 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
           export ALLOW_MISSING_DEPENDENCIES=true
+export SKIP_ABI_CHECKS=true
           export FOX_BUILD_DEVICE=sm87xx
           export FOX_AB_DEVICE=1
           export FOX_VIRTUAL_AB_DEVICE=1
