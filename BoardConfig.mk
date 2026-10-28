@@ -154,3 +154,6 @@ TW_LOAD_VENDOR_MODULES_EXCLUDE_GKI      := true
 TW_NO_SCREEN_BLANK                      := true
 TW_USE_SERIALNO_PROPERTY_FOR_DEVICE_ID  := true
 TW_NO_NETWORK                           := true
+
+# Skip ABI compatibility checks (libbinder_ndk LLNDK ABI vs vndk reference mismatch on AOSP16)
+SKIP_ABI_CHECKS := true
