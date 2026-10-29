@@ -60,28 +60,24 @@ jobs:
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
           # fox_16.0 source is missing hal_hwcrypto* attribute declarations.
-          # Declare EVERY hal_hwcrypto* attribute that is referenced but missing
-          # (.te/.conf use ";" syntax, .cil uses CIL "()" syntax)
+          # Declare the two known-missing attributes in every file that references
+          # hal_hwcrypto* (.te/.conf use ";", .cil uses CIL "()" syntax).
+          # Direct declaration -- same method proven on the previous run.
           for F in $(grep -rl 'hal_hwcrypto' system/sepolicy/ 2>/dev/null); do
             case "$F" in
               *.cil)
-                grep -oP '\(typeattribute\s+\S+\s+hal_hwcrypto\w*\)' "$F" 2>/dev/null | sed -E 's/^\(typeattribute[[:space:]]+[^ ]+[[:space:]]+//; s/\)$//' | sort -u | while read A; do
-                  if ! grep -q "(attribute $A)" "$F"; then
-                    sed -i "1i (attribute $A)" "$F"
-                    echo "CIL_DECLARED: $F -> $A"
-                  fi
-                done
+                grep -q '(attribute hal_hwcrypto)' "$F" || sed -i '1i (attribute hal_hwcrypto)' "$F"
+                grep -q '(attribute hal_hwcrypto_server)' "$F" || sed -i '1i (attribute hal_hwcrypto_server)' "$F"
                 ;;
               *)
-                grep -oP 'typeattribute\s+\S+\s+hal_hwcrypto\w*;' "$F" 2>/dev/null | sed -E 's/^typeattribute[[:space:]]+[^ ]+[[:space:]]+//; s/;$//' | sort -u | while read A; do
-                  if ! grep -q "^attribute $A;" "$F"; then
-                    sed -i "1i attribute $A;" "$F"
-                    echo "CONF_DECLARED: $F -> $A"
-                  fi
-                done
+                grep -q '^attribute hal_hwcrypto;' "$F" || sed -i '1i attribute hal_hwcrypto;' "$F"
+                grep -q '^attribute hal_hwcrypto_server;' "$F" || sed -i '1i attribute hal_hwcrypto_server;' "$F"
                 ;;
             esac
           done
+          echo "=== patch done ==="
+          head -4 system/sepolicy/vendor/hal_hwcrypto_default.te || true
+          grep -l hal_hwcrypto system/sepolicy/vendor/hal_hwcrypto_default.te || true
           # Force ninja to rebuild every sepolicy intermediate from the patched sources
           find out -path '*sepolicy*' -delete 2>/dev/null || true
           echo "=== sepolicy intermediates cleared ==="
