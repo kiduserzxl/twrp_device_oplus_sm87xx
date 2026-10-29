@@ -59,23 +59,26 @@ jobs:
       - name: Patch SELinux policy for recovery
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
-          # fox_16.0 source: hal_hwcrypto_server is referenced but never declared.
-          # Declare the attribute in every file that references it (.te/.conf use ";",
-          # .cil uses CIL "()" syntax). The error says "not declared", so no duplicate
-          # declaration exists anywhere -> this is safe.
-          for F in $(grep -rl 'hal_hwcrypto_server' system/sepolicy/ 2>/dev/null); do
+          # fox_16.0 source is missing hal_hwcrypto* attribute declarations.
+          # Declare EVERY hal_hwcrypto* attribute that is referenced but missing
+          # (.te/.conf use ";" syntax, .cil uses CIL "()" syntax)
+          for F in $(grep -rl 'hal_hwcrypto' system/sepolicy/ 2>/dev/null); do
             case "$F" in
               *.cil)
-                if ! grep -q '(attribute hal_hwcrypto_server)' "$F"; then
-                  sed -i '1i (attribute hal_hwcrypto_server)' "$F"
-                  echo "CIL_DECLARED: $F"
-                fi
+                grep -oP '\(typeattribute\s+\S+\s+hal_hwcrypto\w*\)' "$F" 2>/dev/null | sed -E 's/^\(typeattribute[[:space:]]+[^ ]+[[:space:]]+//; s/\)$//' | sort -u | while read A; do
+                  if ! grep -q "(attribute $A)" "$F"; then
+                    sed -i "1i (attribute $A)" "$F"
+                    echo "CIL_DECLARED: $F -> $A"
+                  fi
+                done
                 ;;
               *)
-                if ! grep -q '^attribute hal_hwcrypto_server;' "$F"; then
-                  sed -i '1i attribute hal_hwcrypto_server;' "$F"
-                  echo "CONF_DECLARED: $F"
-                fi
+                grep -oP 'typeattribute\s+\S+\s+hal_hwcrypto\w*;' "$F" 2>/dev/null | sed -E 's/^typeattribute[[:space:]]+[^ ]+[[:space:]]+//; s/;$//' | sort -u | while read A; do
+                  if ! grep -q "^attribute $A;" "$F"; then
+                    sed -i "1i attribute $A;" "$F"
+                    echo "CONF_DECLARED: $F -> $A"
+                  fi
+                done
                 ;;
             esac
           done
