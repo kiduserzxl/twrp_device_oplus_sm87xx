@@ -59,25 +59,17 @@ jobs:
       - name: Patch SELinux policy for recovery
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
-          # fox_16.0 source is missing hal_hwcrypto* attribute declarations.
-          # Declare the two known-missing attributes in every file that references
-          # hal_hwcrypto* (.te/.conf use ";", .cil uses CIL "()" syntax).
-          # Direct declaration -- same method proven on the previous run.
-          for F in $(grep -rl 'hal_hwcrypto' system/sepolicy/ 2>/dev/null); do
-            case "$F" in
-              *.cil)
-                grep -q '(attribute hal_hwcrypto)' "$F" || sed -i '1i (attribute hal_hwcrypto)' "$F"
-                grep -q '(attribute hal_hwcrypto_server)' "$F" || sed -i '1i (attribute hal_hwcrypto_server)' "$F"
-                ;;
-              *)
-                grep -q '^attribute hal_hwcrypto;' "$F" || sed -i '1i attribute hal_hwcrypto;' "$F"
-                grep -q '^attribute hal_hwcrypto_server;' "$F" || sed -i '1i attribute hal_hwcrypto_server;' "$F"
-                ;;
-            esac
+          # vendor_sepolicy build cannot see the hal_hwcrypto* attributes that are
+          # declared in plat (private/attributes). Declare them ONLY in vendor-side
+          # files -- never touch plat/private/public/prebuilts (they already declare
+          # hal_hwcrypto and would then conflict).
+          for F in $(grep -rl 'hal_hwcrypto' system/sepolicy/vendor/ 2>/dev/null); do
+            grep -q '^attribute hal_hwcrypto;' "$F" || sed -i '1i attribute hal_hwcrypto;' "$F"
+            grep -q '^attribute hal_hwcrypto_server;' "$F" || sed -i '1i attribute hal_hwcrypto_server;' "$F"
+            echo "PATCHED_VENDOR: $F"
           done
           echo "=== patch done ==="
           head -4 system/sepolicy/vendor/hal_hwcrypto_default.te || true
-          grep -l hal_hwcrypto system/sepolicy/vendor/hal_hwcrypto_default.te || true
           # Force ninja to rebuild every sepolicy intermediate from the patched sources
           find out -path '*sepolicy*' -delete 2>/dev/null || true
           echo "=== sepolicy intermediates cleared ==="
