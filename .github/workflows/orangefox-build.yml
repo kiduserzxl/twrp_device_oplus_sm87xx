@@ -56,6 +56,21 @@ jobs:
           cd "$GITHUB_WORKSPACE/workspace"
           git clone https://github.com/kiduserzxl/twrp_device_oplus_sm87xx -b fox-sm87xx device/oplus/sm87xx
 
+      - name: Patch SELinux policy for recovery
+        run: |
+          cd "$GITHUB_WORKSPACE/workspace"
+          # fox_16.0 source: hal_hwcrypto_server attribute missing -> remove its references
+          # (recovery does not need the hwcrypto HAL policy)
+          files=$(grep -rl 'hal_hwcrypto_server' system/sepolicy/ 2>/dev/null || true)
+          if [ -n "$files" ]; then
+            for f in $files; do
+              sed -i '/hal_hwcrypto_server/d' "$f"
+              echo "Patched: $f"
+            done
+          else
+            echo "No hal_hwcrypto_server references found"
+          fi
+
       - name: Build OrangeFox recovery
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
