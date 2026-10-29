@@ -41,12 +41,18 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/workspace"
           cd "$GITHUB_WORKSPACE/workspace"
           repo init --depth=1 -u https://gitlab.com/OrangeFox/Manifest.git -b fox_16.0
+          # Recovery builds do not use the media codec libs (libvpx/libwebm).
+          # These two repos keep failing to fetch from googlesource, so drop
+          # them from the tree to make the sync reliable.
+          mkdir -p .repo/local_manifests
+          printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<manifest>' '  <remove-project name="platform/external/libvpx" />' '  <remove-project name="platform/external/libwebm" />' '</manifest>' > .repo/local_manifests/drop-media.xml
+          cat .repo/local_manifests/drop-media.xml
           (while true; do echo "Syncing OrangeFox sources..."; sleep 60; done) &
           TIP_PID=$!
           n=0
           until repo sync -c --force-sync --no-tags --optimized-fetch -j 4; do
             n=$((n+1))
-            if [ "$n" -ge 5 ]; then echo "Sync failed after 5 attempts"; exit 1; fi
+            if [ "$n" -ge 5 ]; then echo "Sync failed after 5 attempts"; kill $TIP_PID || true; exit 1; fi
             echo "Sync attempt $n failed, retrying in 15s..."; sleep 15
           done
           kill $TIP_PID || true
