@@ -59,17 +59,29 @@ jobs:
       - name: Patch SELinux policy for recovery
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
-          # fox_16.0 source: hal_hwcrypto_server attribute missing -> remove its references
-          # (recovery does not need the hwcrypto HAL policy)
-          files=$(grep -rl 'hal_hwcrypto_server' system/sepolicy/ 2>/dev/null || true)
-          if [ -n "$files" ]; then
-            for f in $files; do
-              sed -i '/hal_hwcrypto_server/d' "$f"
-              echo "Patched: $f"
-            done
-          else
-            echo "No hal_hwcrypto_server references found"
-          fi
+          # fox_16.0 source: hal_hwcrypto_server is referenced but never declared.
+          # Declare the attribute in every file that references it (.te/.conf use ";",
+          # .cil uses CIL "()" syntax). The error says "not declared", so no duplicate
+          # declaration exists anywhere -> this is safe.
+          for F in $(grep -rl 'hal_hwcrypto_server' system/sepolicy/ 2>/dev/null); do
+            case "$F" in
+              *.cil)
+                if ! grep -q '(attribute hal_hwcrypto_server)' "$F"; then
+                  sed -i '1i (attribute hal_hwcrypto_server)' "$F"
+                  echo "CIL_DECLARED: $F"
+                fi
+                ;;
+              *)
+                if ! grep -q '^attribute hal_hwcrypto_server;' "$F"; then
+                  sed -i '1i attribute hal_hwcrypto_server;' "$F"
+                  echo "CONF_DECLARED: $F"
+                fi
+                ;;
+            esac
+          done
+          # Force ninja to rebuild every sepolicy intermediate from the patched sources
+          find out -path '*sepolicy*' -delete 2>/dev/null || true
+          echo "=== sepolicy intermediates cleared ==="
 
       - name: Build OrangeFox recovery
         run: |
