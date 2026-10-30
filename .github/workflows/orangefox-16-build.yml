@@ -1,4 +1,4 @@
-name: OrangeFox 16 Builder - sm87xx (Ace5Pro / Pad2Pro)
+name: OrangeFox 16 Builder - Ace5Pro (dodge-based)
 
 on:
   workflow_dispatch:
@@ -60,40 +60,53 @@ jobs:
           done
           kill $TIP_PID || true
 
-      - name: Setup device tree
+      - name: Setup device tree (OrangeFox dodge + Ace5Pro params)
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
-          git clone https://github.com/kiduserzxl/twrp_device_oplus_sm87xx -b fox-sm87xx device/oplus/sm87xx
+          # Official OrangeFox tree for OnePlus 13 (dodge, sm8750) - same platform as Ace5Pro
+          git clone https://gitlab.com/OrangeFox/device/dodge -b fox_14.1 device/oneplus/dodge
+          cd device/oneplus/dodge
 
-      - name: Patch SELinux policy for recovery
-        run: |
-          cd "$GITHUB_WORKSPACE/workspace"
-          # vendor_sepolicy build cannot see the hal_hwcrypto* attributes that are
-          # declared in plat (private/attributes). Declare them ONLY in vendor-side
-          # files -- never touch plat/private/public/prebuilts (they already declare
-          # hal_hwcrypto and would then conflict).
-          for F in $(grep -rl 'hal_hwcrypto' system/sepolicy/vendor/ 2>/dev/null); do
-            grep -q '^attribute hal_hwcrypto;' "$F" || sed -i '1i attribute hal_hwcrypto;' "$F"
-            grep -q '^attribute hal_hwcrypto_server;' "$F" || sed -i '1i attribute hal_hwcrypto_server;' "$F"
-            echo "PATCHED_VENDOR: $F"
-          done
-          echo "=== patch done ==="
-          head -4 system/sepolicy/vendor/hal_hwcrypto_default.te || true
-          # Force ninja to rebuild every sepolicy intermediate from the patched sources
-          find out -path '*sepolicy*' -delete 2>/dev/null || true
-          echo "=== sepolicy intermediates cleared ==="
+          # --- device codename + model ---
+          sed -i 's/^PRODUCT_DEVICE *:= *dodge/PRODUCT_DEVICE := PKR110/' twrp_dodge.mk
+          sed -i 's/^PRODUCT_MODEL *:= *OnePlus 13/PRODUCT_MODEL := OnePlus Ace5 Pro/' twrp_dodge.mk
+
+          # --- device identification strings (getprop ro.product.model on device) ---
+          sed -i 's/TARGET_DEVICE_ALT="PJZ110,OP5D55L1,OP5D0DL1,CPH2649,CPH2653,CPH2655"/TARGET_DEVICE_ALT="PKR110,OPD2413"/' vendorsetup.sh
+
+          # --- Ace5 Pro dynamic partition sizes (BOARD_SUPER_PARTITION_SIZE) ---
+          sed -i 's/^BOARD_SUPER_PARTITION_SIZE *:= *15354134528/BOARD_SUPER_PARTITION_SIZE := 14077349888/' BoardConfig.mk
+          sed -i 's/^BOARD_QTI_DYNAMIC_PARTITIONS_SIZE *:= *15349940224/BOARD_QTI_DYNAMIC_PARTITIONS_SIZE := 14073155584/' BoardConfig.mk
+          sed -i 's/^OF_DYNAMIC_FULL_SIZE *:= *15354134528/OF_DYNAMIC_FULL_SIZE := 14077349888/' fox_dodge.mk
+
+          # --- recovery version tag ---
+          sed -i 's/^TW_DEVICE_VERSION *:= *OnePlus_13/TW_DEVICE_VERSION := OPLUS-SM87XX/' BoardConfig.mk
+
+          # --- Android 16 CrashRecovery apex: declare system server jar (required by fox_16.0 manifest) ---
+          echo 'PRODUCT_APEX_SYSTEM_SERVER_JARS += com.android.crashrecovery.systemserverclasspath.fragment:service-crashrecovery' >> device.mk
+
+          echo "=== patched twrp_dodge.mk ==="
+          grep -E 'PRODUCT_(DEVICE|NAME|MODEL)' twrp_dodge.mk
+          echo "=== patched BoardConfig.mk ==="
+          grep -E 'BOARD_SUPER_PARTITION_SIZE|BOARD_QTI_DYNAMIC_PARTITIONS_SIZE|TW_DEVICE_VERSION' BoardConfig.mk
+          echo "=== patched fox_dodge.mk ==="
+          grep -E 'OF_DYNAMIC_FULL_SIZE' fox_dodge.mk
+          echo "=== patched vendorsetup.sh ==="
+          grep -E 'TARGET_DEVICE_ALT' vendorsetup.sh
+          echo "=== patched device.mk tail ==="
+          tail -3 device.mk
 
       - name: Build OrangeFox recovery
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
           export ALLOW_MISSING_DEPENDENCIES=true
           export SKIP_ABI_CHECKS=true
-          export FOX_BUILD_DEVICE=sm87xx
+          export FOX_BUILD_DEVICE=dodge
           export FOX_AB_DEVICE=1
           export FOX_VIRTUAL_AB_DEVICE=1
           export LC_ALL=C
           source build/envsetup.sh
-          lunch twrp_sm87xx-eng || lunch twrp_sm87xx-ap2a-eng || lunch twrp_sm87xx
+          lunch twrp_dodge-eng || lunch twrp_dodge
           (while true; do echo "$(date +%T) Building OrangeFox..."; sleep 60; done) &
           TIP_PID=$!
           mka adbd recoveryimage || m recoveryimage
@@ -102,7 +115,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OrangeFox-sm87xx-Ace5Pro-Pad2Pro
+          name: OrangeFox-Ace5Pro-PKR110
           path: |
-            workspace/out/target/product/sm87xx/*.img
+            workspace/out/target/product/dodge/*.img
           if-no-files-found: error
