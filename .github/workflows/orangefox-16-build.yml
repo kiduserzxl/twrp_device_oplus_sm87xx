@@ -103,6 +103,20 @@ jobs:
       - name: Build OrangeFox recovery
         run: |
           cd "$GITHUB_WORKSPACE/workspace"
+          # --- fox_16.0 manifest omits libfox_protocol_types (required by foxcli Rust CLI) ---
+          # foxcli is optional Fox tooling; disable it so the recovery builds.
+          # 1) drop the soong module (rename Android.bp so soong no longer sees it)
+          if [ -d external/foxcli ]; then
+            mv external/foxcli/Android.bp external/foxcli/Android.bp.disabled 2>/dev/null || true
+          fi
+          # 2) drop any PRODUCT_PACKAGES/install references
+          if [ -f bootable/recovery/orangefox.mk ]; then
+            sed -i '/foxcli/d' bootable/recovery/orangefox.mk || true
+          fi
+          if [ -f bootable/recovery/Android.bp ]; then
+            sed -i '/foxcli/d' bootable/recovery/Android.bp || true
+          fi
+          grep -rn "foxcli" bootable/recovery/orangefox.mk bootable/recovery/Android.bp 2>/dev/null || echo "foxcli references removed"
           export ALLOW_MISSING_DEPENDENCIES=true
           export SKIP_ABI_CHECKS=true
           export FOX_BUILD_DEVICE=dodge
