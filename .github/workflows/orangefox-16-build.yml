@@ -68,8 +68,12 @@ jobs:
           cd device/oneplus/dodge
 
           # --- device codename + model ---
-          sed -i 's/^PRODUCT_DEVICE *:= *dodge/PRODUCT_DEVICE := PKR110/' twrp_dodge.mk
+          # NOTE: keep PRODUCT_DEVICE=dodge! AOSP16 derives TARGET_DEVICE_DIR from
+          # device/<vendor>/<TARGET_DEVICE> dir name; PKR110 here would break BoardConfig lookup.
+          # PKR110 identification is handled via TARGET_DEVICE_ALT (vendorsetup.sh) +
+          # TW_DEVICE_VERSION (About page) + PRODUCT_MODEL (display name).
           sed -i 's/^PRODUCT_MODEL *:= *OnePlus 13/PRODUCT_MODEL := OnePlus Ace5 Pro/' twrp_dodge.mk
+          sed -i '2i DEVICE_PATH := device/oneplus/dodge' twrp_dodge.mk
 
           # --- device identification strings (getprop ro.product.model on device) ---
           sed -i 's/TARGET_DEVICE_ALT="PJZ110,OP5D55L1,OP5D0DL1,CPH2649,CPH2653,CPH2655"/TARGET_DEVICE_ALT="PKR110,OPD2413"/' vendorsetup.sh
@@ -86,7 +90,7 @@ jobs:
           echo 'PRODUCT_APEX_SYSTEM_SERVER_JARS += com.android.crashrecovery.systemserverclasspath.fragment:service-crashrecovery' >> device.mk
 
           echo "=== patched twrp_dodge.mk ==="
-          grep -E 'PRODUCT_(DEVICE|NAME|MODEL)' twrp_dodge.mk
+          grep -E 'DEVICE_PATH|PRODUCT_(NAME|MODEL)' twrp_dodge.mk
           echo "=== patched BoardConfig.mk ==="
           grep -E 'BOARD_SUPER_PARTITION_SIZE|BOARD_QTI_DYNAMIC_PARTITIONS_SIZE|TW_DEVICE_VERSION' BoardConfig.mk
           echo "=== patched fox_dodge.mk ==="
